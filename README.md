@@ -6,13 +6,13 @@ Julius Baer Wealth Intelligence challenge, which asks teams to move from "what
 does my client's portfolio look like?" to "what should I know, and what should
 I do next?"
 
-```text
+
 1. **Source** - load the synthetic book: 20 clients, 24 portfolios, 1,015 positions across five dated snapshots.
 2. **Analyse** - run deterministic checks for mandate fit, risk alignment, liquidity, collateral and event exposure.
 3. **Explain** - attach evidence to every review lead, resolved to a CSV line or note section.
 4. **Prepare** - order the RM's attention and produce action briefs and 60-second call briefs.
 5. **Decide** - the RM records judgement and follow-through locally; the app never trades or contacts clients.
-```
+
 
 The challenge specification is in [docs/challenge.md](docs/challenge.md).
 The challenge is from [Singhacks-2026/juliusbaer](https://github.com/Singhacks-2026/juliusbaer)
