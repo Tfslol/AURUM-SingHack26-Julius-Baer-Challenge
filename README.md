@@ -1,96 +1,132 @@
-# Aurum — RM Intelligence Workbench
+# RM Intelligence Workbench
 
-Aurum is a local-first Streamlit prototype for the **SingHacks 2026 Julius Baer
-Wealth Intelligence** challenge. It helps a relationship manager move from
-"what does my client's portfolio look like?" to "what should I know, and what
-should I do next?" — while keeping the RM in control of every decision.
+An AI-assisted workbench that turns private-banking portfolio data into
+**review-ready, evidence-traced client insights**. Built for the SingHacks 2026
+Julius Baer Wealth Intelligence challenge, which asks teams to move from "what
+does my client's portfolio look like?" to "what should I know, and what should
+I do next?"
 
-It runs on a synthetic dataset: 20 clients, 24 portfolios, 1,015 positions
-across five dated snapshots ending 2026-08-26. No real client data is used.
+```text
+1. **Source** - load the synthetic book: 20 clients, 24 portfolios, 1,015 positions across five dated snapshots.
+2. **Analyse** - run deterministic checks for mandate fit, risk alignment, liquidity, collateral and event exposure.
+3. **Explain** - attach evidence to every review lead, resolved to a CSV line or note section.
+4. **Prepare** - order the RM's attention and produce action briefs and 60-second call briefs.
+5. **Decide** - the RM records judgement and follow-through locally; the app never trades or contacts clients.
+```
 
-## What it does
+The challenge specification is in [docs/challenge.md](docs/challenge.md).
+The challenge is from [Singhacks-2026/juliusbaer](https://github.com/Singhacks-2026/juliusbaer)
 
-Aurum turns deterministic portfolio facts and controlled event data into
-review leads the RM can act on:
+---
 
-- **Home** — a priority-ordered view of the book, plus a calendar of dated
-  obligations (cash needs, KYC reviews, RM tasks) and mapped portfolio events.
-- **Alignment & conflicts** — whether each portfolio still fits the client's
-  intent (risk profile, mandate, objectives, events), with an evidence trail
-  that resolves every claim to a CSV line or note section.
-- **Command Center** — an ordered what/when/why/how action sequence per client,
-  plus a manual allocation scenario preview.
-- **Focus casebook** — three deeply prepared client cases with relationship
-  context, call guidance, choice framing and auditable RM decisions.
-- **Client deep dive** — allocation, snapshot history with price/FX/flow
-  attribution, event mapping, alignment and a 60-second call brief.
-- **Notes library** — searchable source RM notes.
-- **Action record** — a local, auditable log of tasks, decisions and
-  post-conversation reflections.
+## Architecture
 
-Optional AI drafting (OpenAI) rewrites a censored, pre-selected fact packet
-into a call brief or recommendation draft. It cannot access files, calculate
-numbers, or approve anything — Priscilla remains accountable.
+```mermaid
+flowchart LR
+    A[data/*.csv + rm_notes.json] --> B[src/singhacks26 analytics]
+    B --> C[Review leads + evidence]
+    C --> D[app.py Streamlit workbench]
+    D --> E[RM judgement + action record]
+    F[Optional OpenAI drafting] -. guardrailed .-> D
+```
 
-## Quick start
+- **Data layer** - synthetic client, portfolio, holdings, mandate, event and RM-note files. `event_log.csv` is the controlled source of truth for 2026.
+- **Analytics layer** - `src/singhacks26/` computes allocation, mandate, liquidity, collateral and event-exposure checks without a model.
+- **Evidence layer** - every review lead carries evidence IDs that resolve to physical CSV lines or note sections.
+- **UI layer** - a Streamlit app with pages for the book, alignment, command center, casebook, deep dive, notes and action record.
+- **AI layer (optional)** - guardrailed OpenAI drafting from a censored fact packet. It cannot access files, calculate numbers or approve anything.
 
-Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
+---
 
-```bash
-uv sync                # install dependencies
+## Repository structure
+
+```text
+.
+├── app.py             # Streamlit entry point
+├── src/singhacks26/   # analytics, AI guardrails, evidence resolution
+├── data/              # synthetic dataset (CSV files + RM notes)
+├── obsidian_vault/    # censored per-client notes and local caches
+├── scripts/           # data-prep and market-api utilities
+├── starter/           # challenge-provided data orientation script
+├── tests/             # pytest suite
+└── docs/              # challenge spec, architecture, data dictionary
+```
+
+---
+
+## Getting started
+
+### Prerequisites
+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) for dependencies and environments
+- API keys are optional: `OPENAI_API_KEY` for alignment reports and AI drafts, `MARKETAUX_API_KEY` for live news
+
+### 1. Install dependencies
+
+```powershell
+uv sync
+```
+
+### 2. Run the workbench
+
+```powershell
 uv run streamlit run app.py
 ```
 
-Copy `.env.example` to `.env` and add your keys to enable the optional
-features: `OPENAI_API_KEY` (alignment reports and AI drafts) and
-`MARKETAUX_API_KEY` (live news). The app still runs without them; those
-features simply stay disabled.
+Then open the URL Streamlit prints.
 
-## How it works
+> The app runs without API keys. Live news and AI drafting simply stay disabled.
 
-```
-data/*.csv + rm_notes.json   source of truth
-        |
-        v
-src/singhacks26/             deterministic analytics + guardrailed AI
-        |
-        v
-app.py                       Streamlit workbench
+### 3. Run the tests
+
+```powershell
+uv run pytest
 ```
 
-- `event_log.csv` is the authoritative source for anything that happened in
-  2026; the model never free-associates about geopolitics.
-- Live Marketaux news is a separate, dated feed. It is cached locally and only
-  queried for held sectors using censored queries.
-- Client data stays local. Only censored, pre-selected facts leave the machine.
+---
 
-## Repository layout
+## How the workbench works
 
-| Path                    | Purpose                                                |
-| ----------------------- | ------------------------------------------------------ |
-| `app.py`                | Streamlit entry point                                  |
-| `src/singhacks26/`      | Package: analytics, AI guardrails, evidence resolution |
-| `data/`                 | Synthetic dataset (CSV files + RM notes)               |
-| `obsidian_vault/`       | Censored per-client context notes + local caches       |
-| `scripts/`              | Data-prep and market-api utilities                     |
-| `starter/quickstart.py` | Challenge-provided data orientation script             |
-| `tests/`                | pytest suite                                           |
-| `docs/`                 | Challenge spec, architecture, data dictionary          |
+1. **Load and hash** - CSV files load once and a source hash invalidates cached analysis when data changes.
+2. **Surface review leads** - per-client checks flag mandate drift, risk mismatch, liquidity gaps, collateral stress and event exposure.
+3. **Trace evidence** - each lead carries evidence IDs that resolve to CSV line numbers for RM verification.
+4. **Prepare the RM** - leads become ordered action briefs and a 60-second call brief with questions to ask.
+5. **Record judgement** - decisions, tasks and conversation reflections persist locally with an audit trail.
 
-## Development
+---
 
-This project uses **uv** for environment and dependency management. Do not use
-`pip`, `poetry`, `pipenv`, or `conda`.
+## Scope and honesty note
 
-```bash
-uv run pytest                # run tests
-uv run ruff check .          # lint
-uv run ruff format .         # format
-uv run ruff format --check . # check formatting
-```
+Built for a hackathon within a limited timebox.
 
-To add or remove dependencies, use `uv add <pkg>`, `uv add --group dev <pkg>`,
-or `uv remove <pkg>`, and commit both `pyproject.toml` and `uv.lock`.
+What is implemented:
 
-Collaboration conventions (branching and direct merges) are defined in
-[`AGENTS.md`](AGENTS.md).
+- **Deterministic analytics** - mandate, allocation, liquidity, collateral and event-exposure checks.
+- **Evidence tracing** - review leads resolve to CSV lines and note sections.
+- **Guardrailed AI drafting** - censored fact packets with numeric and language guardrails.
+- **Local workflow state** - tasks, decisions and reflections with an audit trail.
+
+Not implemented:
+
+- Bank SSO and immutable audit storage.
+- Real client data or a live banking connection.
+- Autonomous trading, client contact or tax conclusions.
+
+The dataset is fully synthetic. No real client data is used.
+
+> LLM Disclosure: Most of this project, including this README, were generated with the help of a large language model, due to the short time constraint of the hackathon
+
+---
+
+## Tech stack
+
+| Area           | Tech                                      |
+| -------------- | ----------------------------------------- |
+| Language       | Python 3.11+                              |
+| UI             | Streamlit                                 |
+| Data           | pandas                                    |
+| AI             | OpenAI Responses API (structured outputs) |
+| Packaging      | uv, hatchling                             |
+| Testing / lint | pytest, ruff                              |
+| API            | MarketAux                                 |
