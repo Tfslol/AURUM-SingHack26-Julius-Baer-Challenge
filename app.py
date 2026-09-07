@@ -1571,7 +1571,9 @@ data = load_data()
 clients = data["clients"]
 impacts = build_event_impacts(data)
 attention = attention_queue(data)
+# Live news is fetched from Marketaux once per cache TTL; failures fall back to the last cache.
 news_payload, news_ranking, news_error = ensure_news(data)
+# Alignment preloads the four presentation clients; the remaining clients load in the background.
 alignment_reports, alignment_errors, alignment_client_errors = load_alignment_reports(data)
 alignment_inbox = conflict_inbox(list(alignment_reports.values()))
 if not alignment_inbox.empty:

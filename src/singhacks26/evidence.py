@@ -85,9 +85,7 @@ def _latest_snapshot(frame: pd.DataFrame) -> str:
     return str(frame["snapshot_date"].astype(str).max())
 
 
-def _events_for_client(
-    data: dict[str, Any], client_id: str, vault_text: str | None = None
-) -> list[int]:
+def _events_for_client(data: dict[str, Any], client_id: str, vault_text: str | None = None) -> list[int]:
     """Physical lines of the controlled event_log rows matched to this client.
 
     Uses the same theme lexicon and text sources as the alignment engine so the
@@ -101,13 +99,7 @@ def _events_for_client(
     holdings = _frame(data, "holdings")
     positions = holdings.loc[holdings["client_id"].astype(str) == str(client_id)]
     position_text = " ".join(
-        positions[
-            [
-                column
-                for column in ["asset_class", "sub_asset_class", "sector", "region"]
-                if column in positions
-            ]
-        ]
+        positions[[column for column in ["asset_class", "sub_asset_class", "sector", "region"] if column in positions]]
         .fillna("")
         .astype(str)
         .agg(" ".join, axis=1)
@@ -115,13 +107,9 @@ def _events_for_client(
     client = _client_frame(data, client_id, "clients")
     client_row = client.iloc[0] if not client.empty else pd.Series(dtype=object)
     notes = data.get("rm_notes", []) if isinstance(data.get("rm_notes"), list) else []
-    note_text = " ".join(
-        str(note.get("note", "")) for note in notes if note.get("client_id") == client_id
-    )
+    note_text = " ".join(str(note.get("note", "")) for note in notes if note.get("client_id") == client_id)
     themes_of = lambda text: {  # noqa: E731 - local helper matching alignment.py
-        theme
-        for theme, words in THEME_LEXICON.items()
-        if any(word in str(text).lower() for word in words)
+        theme for theme, words in THEME_LEXICON.items() if any(word in str(text).lower() for word in words)
     }
     client_themes = themes_of(
         " ".join(
@@ -135,8 +123,7 @@ def _events_for_client(
     )
     mask = event_log.apply(
         lambda event: bool(
-            client_themes
-            & themes_of(f"{event.get('primary_transmission', '')} {event.get('description', '')}")
+            client_themes & themes_of(f"{event.get('primary_transmission', '')} {event.get('description', '')}")
         ),
         axis=1,
     )
@@ -146,9 +133,7 @@ def _events_for_client(
 def _resolve_csv(data: dict[str, Any], client_id: str, file_name: str, key: str) -> Source:
     frame = _frame(data, file_name)
     if frame.empty:
-        return Source(
-            f"{file_name}:{key}" if key else file_name, "unknown", file_name, caption="Unavailable"
-        )
+        return Source(f"{file_name}:{key}" if key else file_name, "unknown", file_name, caption="Unavailable")
 
     if file_name == "clients.csv":
         mask = (
@@ -157,11 +142,7 @@ def _resolve_csv(data: dict[str, Any], client_id: str, file_name: str, key: str)
             else pd.Series(False, index=frame.index)
         )
         return Source(
-            f"{file_name}:{key}",
-            "csv",
-            file_name,
-            key=key or client_id,
-            line_numbers=_physical_lines(frame, mask),
+            f"{file_name}:{key}", "csv", file_name, key=key or client_id, line_numbers=_physical_lines(frame, mask)
         )
 
     if file_name == "portfolios.csv":
@@ -179,15 +160,9 @@ def _resolve_csv(data: dict[str, Any], client_id: str, file_name: str, key: str)
 
     if file_name == "holdings.csv":
         snapshot = key or _latest_snapshot(_client_frame(data, client_id, "holdings"))
-        mask = (frame["client_id"].astype(str) == str(client_id)) & (
-            frame["snapshot_date"].astype(str) == snapshot
-        )
+        mask = (frame["client_id"].astype(str) == str(client_id)) & (frame["snapshot_date"].astype(str) == snapshot)
         return Source(
-            f"holdings.csv:{snapshot}",
-            "csv",
-            "holdings.csv",
-            key=snapshot,
-            line_numbers=_physical_lines(frame, mask),
+            f"holdings.csv:{snapshot}", "csv", "holdings.csv", key=snapshot, line_numbers=_physical_lines(frame, mask)
         )
 
     if file_name == "instruments.csv":
@@ -217,10 +192,7 @@ def _resolve_csv(data: dict[str, Any], client_id: str, file_name: str, key: str)
         else:
             portfolios = _client_frame(data, client_id, "portfolios")
             codes = (
-                portfolios.loc[portfolios["service_model"] != "Custody", "mandate_code"]
-                .astype(str)
-                .unique()
-                .tolist()
+                portfolios.loc[portfolios["service_model"] != "Custody", "mandate_code"].astype(str).unique().tolist()
             )
             mask = frame["mandate_code"].astype(str).isin(codes)
         return Source(
@@ -291,20 +263,10 @@ def _resolve_csv(data: dict[str, Any], client_id: str, file_name: str, key: str)
         if key:
             mask = frame["event_date"].astype(str) == key
             return Source(
-                f"event_log.csv:{key}",
-                "csv",
-                "event_log.csv",
-                key=key,
-                line_numbers=_physical_lines(frame, mask),
+                f"event_log.csv:{key}", "csv", "event_log.csv", key=key, line_numbers=_physical_lines(frame, mask)
             )
         lines = _events_for_client(data, client_id)
-        return Source(
-            "event_log.csv",
-            "csv",
-            "event_log.csv",
-            line_numbers=lines,
-            caption="Matched controlled events",
-        )
+        return Source("event_log.csv", "csv", "event_log.csv", line_numbers=lines, caption="Matched controlled events")
 
     return Source(
         f"{file_name}:{key}" if key else file_name,
@@ -315,26 +277,13 @@ def _resolve_csv(data: dict[str, Any], client_id: str, file_name: str, key: str)
     )
 
 
-def _resolve_note(
-    evidence_id: str,
-    heading: str,
-    client_id: str,
-    vault_dir: Any = None,
-) -> Source:
+def _resolve_note(evidence_id: str, heading: str, client_id: str, vault_dir: Any = None) -> Source:
     """Locate a note section's physical line inside the censored vault page."""
     if vault_dir is None:
-        return Source(
-            evidence_id, "note", "obsidian note", key=heading, caption="Censored Obsidian page"
-        )
+        return Source(evidence_id, "note", "obsidian note", key=heading, caption="Censored Obsidian page")
     path = Path(vault_dir) / "Clients" / f"{client_id}.md"
     if not path.exists():
-        return Source(
-            evidence_id,
-            "note",
-            "obsidian note",
-            key=heading,
-            caption="Censored Obsidian page (missing)",
-        )
+        return Source(evidence_id, "note", "obsidian note", key=heading, caption="Censored Obsidian page (missing)")
     lines = path.read_text(encoding="utf-8").splitlines()
     needle = heading.lower()
     matches = []
@@ -344,11 +293,7 @@ def _resolve_note(
             matches.append(number)
     if not matches:
         # the client-id form points at the whole censored note
-        matches = [
-            number
-            for number, line in enumerate(lines, start=1)
-            if line.strip().startswith(f"# {client_id}")
-        ]
+        matches = [number for number, line in enumerate(lines, start=1) if line.strip().startswith(f"# {client_id}")]
     return Source(evidence_id, "note", path.name, key=heading, line_numbers=matches)
 
 
@@ -362,25 +307,12 @@ def _resolve_news(evidence_id: str, uuid: str, news_payload: Any) -> Source:
                     title = article.get("title", "")
                     caption = f"{title} · {article.get('source', '')}"
                     caption += f" · {article.get('published_at', '')}"
-                    return Source(
-                        evidence_id,
-                        "news",
-                        "Marketaux live feed",
-                        key=uuid,
-                        caption=caption.strip(" ·"),
-                    )
-    return Source(
-        evidence_id, "news", "Marketaux live feed", key=uuid, caption="Cached article not found"
-    )
+                    return Source(evidence_id, "news", "Marketaux live feed", key=uuid, caption=caption.strip(" ·"))
+    return Source(evidence_id, "news", "Marketaux live feed", key=uuid, caption="Cached article not found")
 
 
 def resolve_sources(
-    data: dict[str, Any],
-    client_id: str,
-    evidence_ids: list[str],
-    *,
-    vault_dir: Any = None,
-    news_payload: Any = None,
+    data: dict[str, Any], client_id: str, evidence_ids: list[str], *, vault_dir: Any = None, news_payload: Any = None
 ) -> list[Source]:
     """Resolve each evidence ID to its physical source row(s), de-duplicated."""
     resolved: dict[str, Source] = {}
@@ -396,9 +328,7 @@ def resolve_sources(
         elif file_name.endswith(".csv"):
             source = _resolve_csv(data, client_id, file_name, key)
         else:
-            source = Source(
-                evidence_id, "unknown", file_name, key=key, caption="No source mapping."
-            )
+            source = Source(evidence_id, "unknown", file_name, key=key, caption="No source mapping.")
         resolved[evidence_id] = source
     return list(resolved.values())
 
@@ -424,10 +354,7 @@ def _mermaid_safe(text: str) -> str:
     return re.sub(r"\s+", " ", cleaned).strip()
 
 
-def mermaid_graph(
-    sources: list[Source],
-    targets: list[dict[str, Any]],
-) -> str:
+def mermaid_graph(sources: list[Source], targets: list[dict[str, Any]]) -> str:
     """Build a ``flowchart LR`` string mapping evidence rows to RM review leads.
 
     ``targets`` is a list of ``{"label": ..., "evidence_ids": [...]}``. Evidence

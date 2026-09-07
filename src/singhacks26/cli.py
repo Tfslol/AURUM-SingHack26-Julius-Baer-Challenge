@@ -9,13 +9,7 @@ from typing import Any
 
 import pandas as pd
 
-from .intelligence import (
-    AS_OF,
-    attention_queue,
-    attribute_change,
-    integrity_report,
-    portfolio_mandate_review,
-)
+from .intelligence import AS_OF, attention_queue, attribute_change, integrity_report, portfolio_mandate_review
 
 ROOT = Path(__file__).parents[2]
 DATA = ROOT / "data"
@@ -62,9 +56,7 @@ def client_payload(data: dict[str, Any], client_id: str) -> dict[str, Any]:
         "mandate_review": portfolio_mandate_review(data, client_id).to_dict(orient="records"),
         "rm_notes": [note for note in data["rm_notes"] if note.get("client_id") == client_id],
         "integrity_issues": [
-            issue
-            for issue in integrity_report(data)
-            if client_id in issue.get("affected_clients", [])
+            issue for issue in integrity_report(data) if client_id in issue.get("affected_clients", [])
         ],
     }
 
@@ -91,10 +83,7 @@ def main() -> None:
         args.output.mkdir(parents=True, exist_ok=True)
         for client_id in ["CL-0012", "CL-0014", "CL-0003"]:
             target = args.output / f"client_{client_id}.json"
-            target.write_text(
-                json.dumps(client_payload(data, client_id), indent=2, default=str),
-                encoding="utf-8",
-            )
+            target.write_text(json.dumps(client_payload(data, client_id), indent=2, default=str), encoding="utf-8")
             print(target)
 
 

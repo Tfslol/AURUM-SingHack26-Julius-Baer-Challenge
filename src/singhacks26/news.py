@@ -114,14 +114,7 @@ def queries_for(sector_exposure: dict[str, float]) -> list[dict]:
         if mapping is None:
             continue
         kind, value = mapping
-        queries.append(
-            {
-                "sector": sector,
-                "market_value_usd": usd,
-                "kind": kind,
-                "value": value,
-            }
-        )
+        queries.append({"sector": sector, "market_value_usd": usd, "kind": kind, "value": value})
     return queries
 
 
@@ -148,11 +141,7 @@ def _normalise_article(article: dict) -> dict:
         "published_at": article.get("published_at"),
         "snippet": (article.get("snippet") or "")[:300],
         "entities": [
-            {
-                "symbol": entity.get("symbol"),
-                "name": entity.get("name"),
-                "industry": entity.get("industry"),
-            }
+            {"symbol": entity.get("symbol"), "name": entity.get("name"), "industry": entity.get("industry")}
             for entity in (article.get("entities") or [])
         ],
     }
@@ -314,11 +303,7 @@ def refresh_news(
                 )
             if sleep_seconds > 0:
                 time.sleep(sleep_seconds)
-        payload["clients"][client_id] = {
-            "client_id": client_id,
-            "sectors": sectors,
-            "errors": errors,
-        }
+        payload["clients"][client_id] = {"client_id": client_id, "sectors": sectors, "errors": errors}
 
     cache.save(payload)
     return payload
@@ -340,12 +325,7 @@ def _recency_weight(published_at: str | None, as_of: datetime) -> float:
     return max(0.0, 1.0 - age_days / 7.0)
 
 
-def most_affected(
-    cache: NewsCache | dict,
-    holdings: pd.DataFrame,
-    *,
-    as_of: datetime | None = None,
-) -> pd.DataFrame:
+def most_affected(cache: NewsCache | dict, holdings: pd.DataFrame, *, as_of: datetime | None = None) -> pd.DataFrame:
     """Rank clients by exposure-weighted, recency-decayed news relevance.
 
     Score = sum over the client's sectors of (sector share of latest household

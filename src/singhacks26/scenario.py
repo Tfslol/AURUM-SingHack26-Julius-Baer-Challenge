@@ -6,52 +6,25 @@ from typing import Any
 
 import pandas as pd
 
-ASSET_CLASSES = (
-    "Cash and Equivalents",
-    "Fixed Income",
-    "Equity",
-    "Commodities",
-    "Alternatives",
-    "Structured Products",
-)
+ASSET_CLASSES = ("Cash and Equivalents", "Fixed Income", "Equity", "Commodities", "Alternatives", "Structured Products")
 
 MARKET_CARD_RULES = (
-    {
-        "series_id": "SPX",
-        "label": "S&P 500",
-        "exposure_asset_class": "Equity",
-        "required_sector": None,
-    },
+    {"series_id": "SPX", "label": "S&P 500", "exposure_asset_class": "Equity", "required_sector": None},
     {
         "series_id": "NASDAQ_COMP",
         "label": "Nasdaq",
         "exposure_asset_class": "Equity",
         "required_sector": "Information Technology",
     },
-    {
-        "series_id": "GOLD_USD_OZ",
-        "label": "Gold",
-        "exposure_asset_class": "Commodities",
-        "required_sector": "Gold",
-    },
+    {"series_id": "GOLD_USD_OZ", "label": "Gold", "exposure_asset_class": "Commodities", "required_sector": "Gold"},
     {
         "series_id": "BRENT_USD_BBL",
         "label": "Brent",
         "exposure_asset_class": "Commodities",
         "required_sector": "Energy",
     },
-    {
-        "series_id": "UST_10Y_PCT",
-        "label": "US 10Y",
-        "exposure_asset_class": "Fixed Income",
-        "required_sector": None,
-    },
-    {
-        "series_id": "VIX",
-        "label": "VIX",
-        "exposure_asset_class": "Equity",
-        "required_sector": None,
-    },
+    {"series_id": "UST_10Y_PCT", "label": "US 10Y", "exposure_asset_class": "Fixed Income", "required_sector": None},
+    {"series_id": "VIX", "label": "VIX", "exposure_asset_class": "Equity", "required_sector": None},
 )
 
 
@@ -73,18 +46,12 @@ def allocation_by_asset_class(holdings: pd.DataFrame, client_id: str) -> pd.Data
     grouped = positions.groupby("asset_class", as_index=False)["market_value_usd"].sum()
     grouped = grouped.rename(columns={"market_value_usd": "current_value_usd"})
     total = float(grouped["current_value_usd"].sum())
-    grouped["current_pct"] = (
-        grouped["current_value_usd"].div(total).mul(100).round(2) if total else 0.0
-    )
+    grouped["current_pct"] = grouped["current_value_usd"].div(total).mul(100).round(2) if total else 0.0
     return grouped.sort_values("current_value_usd", ascending=False).reset_index(drop=True)
 
 
 def simulate_reallocation(
-    holdings: pd.DataFrame,
-    client_id: str,
-    source_asset_class: str,
-    destination_asset_class: str,
-    shift_pct: float,
+    holdings: pd.DataFrame, client_id: str, source_asset_class: str, destination_asset_class: str, shift_pct: float
 ) -> dict[str, Any]:
     """Move a portfolio-weight percentage between asset classes at unchanged prices."""
     if source_asset_class == destination_asset_class:
@@ -132,14 +99,8 @@ def simulate_reallocation(
         "largest_scenario_pct": round(float(allocation["scenario_pct"].max()), 2),
         "assumptions": [
             "Total portfolio value and all market prices remain unchanged.",
-            (
-                "The selected percentage is moved between asset classes only; instruments are "
-                "not selected."
-            ),
-            (
-                "Fees, spreads, tax, FX, suitability, liquidity and transaction feasibility "
-                "are excluded."
-            ),
+            ("The selected percentage is moved between asset classes only; instruments are not selected."),
+            ("Fees, spreads, tax, FX, suitability, liquidity and transaction feasibility are excluded."),
         ],
     }
 
@@ -166,13 +127,9 @@ def relevant_market_cards(
         return []
     latest_date = dates[-1]
     previous_date = dates[-2] if len(dates) > 1 else None
-    latest = market_context.loc[
-        market_context["snapshot_date"].astype(str) == latest_date
-    ].set_index("series_id")
+    latest = market_context.loc[market_context["snapshot_date"].astype(str) == latest_date].set_index("series_id")
     previous = (
-        market_context.loc[market_context["snapshot_date"].astype(str) == previous_date].set_index(
-            "series_id"
-        )
+        market_context.loc[market_context["snapshot_date"].astype(str) == previous_date].set_index("series_id")
         if previous_date
         else pd.DataFrame()
     )
@@ -182,11 +139,7 @@ def relevant_market_cards(
         asset_class = str(rule["exposure_asset_class"])
         required_sector = rule["required_sector"]
         has_class_exposure = (
-            max(
-                float(current_weights.get(asset_class, 0.0)),
-                float(scenario_weights.get(asset_class, 0.0)),
-            )
-            > 0
+            max(float(current_weights.get(asset_class, 0.0)), float(scenario_weights.get(asset_class, 0.0))) > 0
         )
         if not has_class_exposure or (required_sector and required_sector not in sectors):
             continue
@@ -195,9 +148,7 @@ def relevant_market_cards(
             continue
         latest_row = latest.loc[series_id]
         previous_value = (
-            float(previous.loc[series_id, "value"])
-            if previous_date and series_id in previous.index
-            else None
+            float(previous.loc[series_id, "value"]) if previous_date and series_id in previous.index else None
         )
         value = float(latest_row["value"])
         cards.append(

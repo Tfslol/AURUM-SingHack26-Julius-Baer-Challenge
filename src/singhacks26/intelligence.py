@@ -66,9 +66,7 @@ def portfolio_mandate_review(data: dict[str, Any], client_id: str) -> pd.DataFra
     holdings = data["holdings"]
     latest = holdings.loc[(holdings.client_id == client_id) & (holdings.snapshot_date == AS_OF)]
     rows: list[dict[str, Any]] = []
-    for _, portfolio in (
-        data["portfolios"].loc[data["portfolios"].client_id == client_id].iterrows()
-    ):
+    for _, portfolio in data["portfolios"].loc[data["portfolios"].client_id == client_id].iterrows():
         if portfolio.service_model == "Custody":
             rows.append(
                 {
@@ -94,20 +92,13 @@ def portfolio_mandate_review(data: dict[str, Any], client_id: str) -> pd.DataFra
                     "actual_pct": round(actual, 2),
                     "min_pct": float(rule.min_pct),
                     "max_pct": float(rule.max_pct),
-                    "status": "pass"
-                    if float(rule.min_pct) <= actual <= float(rule.max_pct)
-                    else "review",
+                    "status": "pass" if float(rule.min_pct) <= actual <= float(rule.max_pct) else "review",
                 }
             )
     return pd.DataFrame(rows)
 
 
-def attribute_change(
-    data: dict[str, Any],
-    client_id: str,
-    start: str = BASELINE,
-    end: str = AS_OF,
-) -> dict[str, Any]:
+def attribute_change(data: dict[str, Any], client_id: str, start: str = BASELINE, end: str = AS_OF) -> dict[str, Any]:
     """Exactly bridge USD value into price, FX and position-flow effects.
 
     New positions use closing-snapshot USD cost basis as deployed capital. Closed
@@ -115,15 +106,11 @@ def attribute_change(
     rounding residual is assigned to price so the bridge reconciles exactly.
     """
     holdings = data["holdings"]
-    rows = holdings.loc[
-        (holdings.client_id == client_id) & holdings.snapshot_date.isin([start, end])
-    ].copy()
+    rows = holdings.loc[(holdings.client_id == client_id) & holdings.snapshot_date.isin([start, end])].copy()
     contributions: list[dict[str, Any]] = []
     keys = rows[["portfolio_id", "instrument_id"]].drop_duplicates().itertuples(index=False)
     for portfolio_id, instrument_id in keys:
-        position = rows.loc[
-            (rows.portfolio_id == portfolio_id) & (rows.instrument_id == instrument_id)
-        ]
+        position = rows.loc[(rows.portfolio_id == portfolio_id) & (rows.instrument_id == instrument_id)]
         before_rows = position.loc[position.snapshot_date == start]
         after_rows = position.loc[position.snapshot_date == end]
         before = None if before_rows.empty else before_rows.iloc[0]
@@ -249,9 +236,7 @@ def attention_queue(data: dict[str, Any]) -> pd.DataFrame:
                 reasons.append(f"Only {gap:.2f} LTV points to margin-call trigger")
             elif historical_ltvs and max(historical_ltvs) >= trigger:
                 severity = max(severity, 82)
-                reasons.append(
-                    f"Facility previously breached {trigger:.1f}% and is currently below it"
-                )
+                reasons.append(f"Facility previously breached {trigger:.1f}% and is currently below it")
             materiality = max(
                 materiality,
                 min(
@@ -264,15 +249,7 @@ def attention_queue(data: dict[str, Any]) -> pd.DataFrame:
                 / 30
                 * 100,
             )
-            evidence.append(
-                Evidence(
-                    "credit_facilities.csv",
-                    facility.facility_id,
-                    "ltv_pct_2026-08-26",
-                    ltv,
-                    AS_OF,
-                )
-            )
+            evidence.append(Evidence("credit_facilities.csv", facility.facility_id, "ltv_pct_2026-08-26", ltv, AS_OF))
 
         mandate = portfolio_mandate_review(data, client_id)
         breaches = mandate.loc[mandate.status == "review"]
@@ -280,9 +257,7 @@ def attention_queue(data: dict[str, Any]) -> pd.DataFrame:
             severity = max(severity, 78)
             materiality = max(materiality, min(len(breaches) * 18, 100))
             reasons.append(f"{len(breaches)} portfolio mandate band(s) need review")
-            evidence.append(
-                Evidence("mandates.csv", client_id, "allocation_bands", len(breaches), AS_OF)
-            )
+            evidence.append(Evidence("mandates.csv", client_id, "allocation_bands", len(breaches), AS_OF))
 
         latest_positions = data["holdings"].loc[
             (data["holdings"].client_id == client_id) & (data["holdings"].snapshot_date == AS_OF)
@@ -290,55 +265,36 @@ def attention_queue(data: dict[str, Any]) -> pd.DataFrame:
         stale = latest_positions.loc[latest_positions.valuation_date < AS_OF]
         if not stale.empty:
             stale_share = (
-                float(stale.market_value_usd.sum())
-                / max(float(latest_positions.market_value_usd.sum()), 1)
-                * 100
+                float(stale.market_value_usd.sum()) / max(float(latest_positions.market_value_usd.sum()), 1) * 100
             )
             severity = max(severity, 85)
             materiality = max(materiality, min(stale_share, 30) / 30 * 100)
             reasons.append(f"{stale_share:.1f}% of household value uses stale marks")
             evidence.append(
                 Evidence(
-                    "holdings.csv",
-                    client_id,
-                    "valuation_date",
-                    sorted(stale.valuation_date.unique().tolist()),
-                    AS_OF,
+                    "holdings.csv", client_id, "valuation_date", sorted(stale.valuation_date.unique().tolist()), AS_OF
                 )
             )
 
         governed = data["portfolios"].loc[
-            (data["portfolios"].client_id == client_id)
-            & (data["portfolios"].service_model == "Discretionary")
+            (data["portfolios"].client_id == client_id) & (data["portfolios"].service_model == "Discretionary")
         ]
         excluded = latest_positions.merge(
-            data["instruments"][["instrument_id", "sustainability_excluded"]],
-            on="instrument_id",
-            how="left",
+            data["instruments"][["instrument_id", "sustainability_excluded"]], on="instrument_id", how="left"
         )
         excluded = excluded.loc[
-            excluded.portfolio_id.isin(governed.portfolio_id)
-            & (excluded.sustainability_excluded == "Y")
+            excluded.portfolio_id.isin(governed.portfolio_id) & (excluded.sustainability_excluded == "Y")
         ]
         if not excluded.empty and governed.mandate_code.str.contains("SUST").any():
             excluded_share = (
-                float(excluded.market_value_usd.sum())
-                / max(float(latest_positions.market_value_usd.sum()), 1)
-                * 100
+                float(excluded.market_value_usd.sum()) / max(float(latest_positions.market_value_usd.sum()), 1) * 100
             )
             severity = max(severity, 88)
             materiality = max(materiality, min(excluded_share, 30) / 30 * 100)
-            reasons.append(
-                f"{excluded_share:.1f}% is flagged excluded inside a sustainable "
-                "discretionary mandate"
-            )
+            reasons.append(f"{excluded_share:.1f}% is flagged excluded inside a sustainable discretionary mandate")
             evidence.append(
                 Evidence(
-                    "instruments.csv",
-                    client_id,
-                    "sustainability_excluded",
-                    excluded.instrument_id.tolist(),
-                    AS_OF,
+                    "instruments.csv", client_id, "sustainability_excluded", excluded.instrument_id.tolist(), AS_OF
                 )
             )
 
@@ -347,9 +303,7 @@ def attention_queue(data: dict[str, Any]) -> pd.DataFrame:
             uncalled_usd = 0.0
             sleeve_cash_usd = 0.0
             for _, commitment in commitments.iterrows():
-                uncalled_usd += float(commitment.uncalled) * usd_per_unit(
-                    data["market_context"], commitment.currency
-                )
+                uncalled_usd += float(commitment.uncalled) * usd_per_unit(data["market_context"], commitment.currency)
                 sleeve_cash_usd += float(
                     latest_positions.loc[
                         (latest_positions.portfolio_id == commitment.portfolio_id)
@@ -360,10 +314,7 @@ def attention_queue(data: dict[str, Any]) -> pd.DataFrame:
             if uncalled_usd > sleeve_cash_usd:
                 gap = uncalled_usd - sleeve_cash_usd
                 severity = max(severity, 80)
-                materiality = max(
-                    materiality,
-                    min(gap / max(float(client.total_aum_usd), 1) * 100, 30) / 30 * 100,
-                )
+                materiality = max(materiality, min(gap / max(float(client.total_aum_usd), 1) * 100, 30) / 30 * 100)
                 reasons.append(f"Uncalled commitments exceed same-sleeve cash by USD {gap:,.0f}")
                 evidence.append(
                     Evidence(
@@ -372,8 +323,7 @@ def attention_queue(data: dict[str, Any]) -> pd.DataFrame:
                         "uncalled",
                         uncalled_usd,
                         AS_OF,
-                        "Compared with cash in the committed portfolios; duplicate "
-                        "planned needs are not added.",
+                        "Compared with cash in the committed portfolios; duplicate planned needs are not added.",
                     )
                 )
 
@@ -381,20 +331,15 @@ def attention_queue(data: dict[str, Any]) -> pd.DataFrame:
         for _, need in needs.iterrows():
             due_from = date.fromisoformat(str(need.due_from))
             due_to = date.fromisoformat(str(need.due_to))
-            active_recurring = due_from <= as_of_date <= due_to and str(
-                need.recurrence
-            ).lower().startswith("annual")
+            active_recurring = due_from <= as_of_date <= due_to and str(need.recurrence).lower().startswith("annual")
             days = 0 if active_recurring else (due_from - as_of_date).days
             need_urgency = 100 if days <= 30 else 80 if days <= 90 else 55 if days <= 365 else 30
             urgency = max(urgency, need_urgency)
             if str(need.certainty).lower() == "confirmed":
                 severity = max(severity, 75 if days <= 365 else 45)
-                amount_usd = float(need.amount) * usd_per_unit(
-                    data["market_context"], need.currency
-                )
+                amount_usd = float(need.amount) * usd_per_unit(data["market_context"], need.currency)
                 materiality = max(
-                    materiality,
-                    min(amount_usd / max(float(client.total_aum_usd), 1) * 100, 30) / 30 * 100,
+                    materiality, min(amount_usd / max(float(client.total_aum_usd), 1) * 100, 30) / 30 * 100
                 )
                 reasons.append(
                     f"Confirmed {need.currency} {float(need.amount):,.0f} need "
@@ -484,10 +429,7 @@ def integrity_report(data: dict[str, Any]) -> list[dict[str, Any]]:
                     "status": "block",
                     "records": 1,
                     "affected_clients": [facility.client_id],
-                    "detail": (
-                        f"Facility change less ledger drawdowns: {difference:,.0f} "
-                        f"{facility.facility_ccy}"
-                    ),
+                    "detail": (f"Facility change less ledger drawdowns: {difference:,.0f} " f"{facility.facility_ccy}"),
                     "evidence": f"credit_facilities.csv · {facility.facility_id}; transactions.csv",
                 }
             )
@@ -498,9 +440,7 @@ def integrity_report(data: dict[str, Any]) -> list[dict[str, Any]]:
                 (data["planned_cash_needs"].client_id == client_id)
                 & (data["planned_cash_needs"].currency == currency)
                 & (data["planned_cash_needs"].amount.sub(uncalled).abs() < 0.01)
-                & data["planned_cash_needs"].description.str.contains(
-                    "commitment", case=False, na=False
-                )
+                & data["planned_cash_needs"].description.str.contains("commitment", case=False, na=False)
             ]
             if not duplicates.empty:
                 issues.append(
@@ -509,17 +449,12 @@ def integrity_report(data: dict[str, Any]) -> list[dict[str, Any]]:
                         "status": "review",
                         "records": int(len(duplicates)),
                         "affected_clients": [client_id],
-                        "detail": (
-                            f"{currency} {uncalled:,.0f} appears in commitments and "
-                            "planned needs; count once."
-                        ),
+                        "detail": (f"{currency} {uncalled:,.0f} appears in commitments and planned needs; count once."),
                         "evidence": "commitments.csv; planned_cash_needs.csv",
                     }
                 )
     unverifiable = data["instruments"].loc[
-        data["instruments"]
-        .underlying_reference.fillna("")
-        .str.contains("three Asian banking majors", case=False)
+        data["instruments"].underlying_reference.fillna("").str.contains("three Asian banking majors", case=False)
     ]
     if not unverifiable.empty:
         issues.append(
@@ -528,9 +463,7 @@ def integrity_report(data: dict[str, Any]) -> list[dict[str, Any]]:
                 "status": "review",
                 "records": int(len(unverifiable)),
                 "affected_clients": sorted(
-                    latest.loc[
-                        latest.instrument_id.isin(unverifiable.instrument_id), "client_id"
-                    ].unique()
+                    latest.loc[latest.instrument_id.isin(unverifiable.instrument_id), "client_id"].unique()
                 ),
                 "detail": "Underlying issuers are not named and must not be guessed.",
                 "evidence": "instruments.csv · underlying_reference",

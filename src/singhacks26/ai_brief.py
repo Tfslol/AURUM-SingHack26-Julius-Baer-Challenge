@@ -51,14 +51,10 @@ def validate_ai_draft(draft: AICallBrief, fact_packet: dict) -> None:
     candidate_numbers = {token.lower() for token in NUMBER_PATTERN.findall(candidate)}
     unsupported_numbers = candidate_numbers - allowed_numbers
     if unsupported_numbers:
-        raise RuntimeError(
-            f"AI draft introduced unsupported numeric claims: {sorted(unsupported_numbers)}"
-        )
+        raise RuntimeError(f"AI draft introduced unsupported numeric claims: {sorted(unsupported_numbers)}")
     for pattern in PROHIBITED_PATTERNS:
         if pattern.search(candidate):
-            raise RuntimeError(
-                f"AI draft failed the prohibited-language guardrail: {pattern.pattern}"
-            )
+            raise RuntimeError(f"AI draft failed the prohibited-language guardrail: {pattern.pattern}")
 
 
 def draft_ai_brief(fact_packet: dict) -> tuple[AICallBrief, str]:
@@ -72,9 +68,7 @@ def draft_ai_brief(fact_packet: dict) -> tuple[AICallBrief, str]:
     reasoning_effort = os.getenv("OPENAI_REASONING_EFFORT", DEFAULT_REASONING_EFFORT)
     if reasoning_effort not in SUPPORTED_REASONING_EFFORTS:
         supported = ", ".join(sorted(SUPPORTED_REASONING_EFFORTS))
-        raise RuntimeError(
-            f"Unsupported OPENAI_REASONING_EFFORT={reasoning_effort!r}. Use one of: {supported}."
-        )
+        raise RuntimeError(f"Unsupported OPENAI_REASONING_EFFORT={reasoning_effort!r}. Use one of: {supported}.")
     allowed_evidence = set(fact_packet["allowed_evidence_ids"])
     client = OpenAI(api_key=api_key)
     response = client.responses.parse(

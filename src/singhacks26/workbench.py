@@ -19,14 +19,7 @@ CURATED_THEMES = {
         "SYN-SP-0501",
         "SYN-SP-0505",
     },
-    "US technology and AI": {
-        "SYN-EQ-0003",
-        "SYN-ST-0102",
-        "SYN-ST-0103",
-        "SYN-SP-0501",
-        "SYN-SP-0502",
-        "SYN-AL-0308",
-    },
+    "US technology and AI": {"SYN-EQ-0003", "SYN-ST-0102", "SYN-ST-0103", "SYN-SP-0501", "SYN-SP-0502", "SYN-AL-0308"},
     "Gold": {"SYN-CM-0401", "SYN-CM-0402", "SYN-SP-0504"},
     "Interest-rate duration": {
         "SYN-FI-0201",
@@ -38,12 +31,7 @@ CURATED_THEMES = {
         "SYN-FI-0211",
         "SYN-FI-0212",
     },
-    "Hong Kong property": {
-        "SYN-ST-0106",
-        "SYN-FI-0207",
-        "SYN-SP-0503",
-        "SYN-AL-0307",
-    },
+    "Hong Kong property": {"SYN-ST-0106", "SYN-FI-0207", "SYN-SP-0503", "SYN-AL-0307"},
     "Private markets and gated vehicles": {
         "SYN-AL-0301",
         "SYN-AL-0302",
@@ -84,18 +72,11 @@ def liquidity_profile(holdings: pd.DataFrame, client_id: str, snapshot: str) -> 
 
 
 def lookthrough_exposure(
-    holdings: pd.DataFrame,
-    instruments: pd.DataFrame,
-    client_id: str,
-    snapshot: str,
+    holdings: pd.DataFrame, instruments: pd.DataFrame, client_id: str, snapshot: str
 ) -> pd.DataFrame:
     """Expose wrapper references while retaining direct holdings as separate rows."""
-    rows = holdings.loc[
-        (holdings.client_id == client_id) & (holdings.snapshot_date == snapshot)
-    ].merge(
-        instruments[["instrument_id", "underlying_reference"]],
-        on="instrument_id",
-        how="left",
+    rows = holdings.loc[(holdings.client_id == client_id) & (holdings.snapshot_date == snapshot)].merge(
+        instruments[["instrument_id", "underlying_reference"]], on="instrument_id", how="left"
     )
     rows["economic_reference"] = rows.underlying_reference.fillna("").str.strip()
     rows.loc[rows.economic_reference == "", "economic_reference"] = rows.loc[
@@ -210,10 +191,7 @@ class WorkbenchStore:
                 "action": "decision_comparison_saved",
                 "client_id": client_id,
                 "object_id": comparison["comparison_id"],
-                "detail": {
-                    "name": name,
-                    "calculation_version": comparison["calculation_version"],
-                },
+                "detail": {"name": name, "calculation_version": comparison["calculation_version"]},
             }
         )
         self._write(payload)
@@ -260,14 +238,7 @@ class WorkbenchStore:
         self._write(payload)
         return task
 
-    def update_task(
-        self,
-        *,
-        task_id: str,
-        status: str,
-        rationale: str,
-        actor: str = "Priscilla Ong",
-    ) -> dict:
+    def update_task(self, *, task_id: str, status: str, rationale: str, actor: str = "Priscilla Ong") -> dict:
         if status not in {"open", "in_progress", "complete", "cancelled"}:
             raise ValueError(f"Unsupported task status: {status}")
         payload = self.read()
@@ -286,11 +257,7 @@ class WorkbenchStore:
                 "action": "task_status_updated",
                 "client_id": task["client_id"],
                 "object_id": task_id,
-                "detail": {
-                    "prior_state": prior_state,
-                    "new_state": status,
-                    "rationale": rationale.strip(),
-                },
+                "detail": {"prior_state": prior_state, "new_state": status, "rationale": rationale.strip()},
             }
         )
         self._write(payload)
@@ -328,10 +295,7 @@ class WorkbenchStore:
                 "action": "conversation_outcome_recorded",
                 "client_id": client_id,
                 "object_id": outcome["outcome_id"],
-                "detail": {
-                    "disposition": disposition,
-                    "requested_documents": requested_documents,
-                },
+                "detail": {"disposition": disposition, "requested_documents": requested_documents},
             }
         )
         self._write(payload)
@@ -351,12 +315,7 @@ class WorkbenchStore:
         payload = self.read()
         timestamp = datetime.now(UTC).isoformat(timespec="seconds")
         previous = next(
-            (
-                item["decision"]
-                for item in reversed(payload["decisions"])
-                if item["client_id"] == client_id
-            ),
-            "new",
+            (item["decision"] for item in reversed(payload["decisions"]) if item["client_id"] == client_id), "new"
         )
         record = {
             "decision_id": f"decision-{uuid4().hex[:10]}",
@@ -392,18 +351,10 @@ class WorkbenchStore:
         return record
 
     def save_call_plan_version(
-        self,
-        *,
-        client_id: str,
-        content: str,
-        evidence_version: str,
-        reason: str,
-        actor: str = "Priscilla Ong",
+        self, *, client_id: str, content: str, evidence_version: str, reason: str, actor: str = "Priscilla Ong"
     ) -> dict:
         payload = self.read()
-        client_versions = [
-            item for item in payload["call_plan_versions"] if item["client_id"] == client_id
-        ]
+        client_versions = [item for item in payload["call_plan_versions"] if item["client_id"] == client_id]
         timestamp = datetime.now(UTC).isoformat(timespec="seconds")
         version = {
             "call_plan_version_id": f"callplan-{uuid4().hex[:10]}",

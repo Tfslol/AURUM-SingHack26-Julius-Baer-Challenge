@@ -4,7 +4,6 @@ import json
 
 import pandas as pd
 import pytest
-from ralph.stub_alignment import stub_alignment_report
 
 from singhacks26.recommendation import (
     RecommendationDraft,
@@ -12,6 +11,26 @@ from singhacks26.recommendation import (
     validate_recommendation_draft,
     validate_recommendation_evidence,
 )
+
+
+def stub_alignment_report(client_id: str) -> dict:
+    """Return a minimal cached alignment report for offline recommendation tests."""
+    return {
+        "client_id": client_id,
+        "as_of": "2026-08-26",
+        "overall_band": "review",
+        "conflicts": [
+            {
+                "conflict_id": f"{client_id}-C-1",
+                "category": "mandate",
+                "severity": "High",
+                "headline": "Review mandate exclusions.",
+                "detail": "Confirm the mandate exclusions before discussion.",
+                "evidence_ids": [f"note:{client_id}", "clients.csv"],
+                "discussion_topic": "Confirm the mandate exclusions.",
+            }
+        ],
+    }
 
 
 def data_fixture() -> dict:

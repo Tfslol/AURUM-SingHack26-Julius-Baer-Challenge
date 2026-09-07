@@ -17,20 +17,12 @@ WHEN_BY_SEVERITY = {
 
 WHAT_BY_CATEGORY = {
     "risk_profile": (
-        "Run a suitability check on whether the portfolio risk still matches the client's "
-        "stated profile."
+        "Run a suitability check on whether the portfolio risk still matches the client's stated profile."
     ),
-    "mandate": (
-        "Review the flagged exposure against the agreed mandate before discussing portfolio "
-        "options."
-    ),
-    "objectives": (
-        "Reconcile the portfolio with the client's current objective, life event and "
-        "liquidity needs."
-    ),
+    "mandate": ("Review the flagged exposure against the agreed mandate before discussing portfolio options."),
+    "objectives": ("Reconcile the portfolio with the client's current objective, life event and liquidity needs."),
     "event": (
-        "Ask whether the controlled event changed the client's preferences or behaviour "
-        "without assuming causation."
+        "Ask whether the controlled event changed the client's preferences or behaviour without assuming causation."
     ),
 }
 
@@ -59,11 +51,7 @@ def _article_key(article: dict[str, Any]) -> str:
 
 
 def market_signals_for_client(
-    news_payload: dict[str, Any] | None,
-    holdings: pd.DataFrame,
-    client_id: str,
-    *,
-    limit: int = 3,
+    news_payload: dict[str, Any] | None, holdings: pd.DataFrame, client_id: str, *, limit: int = 3
 ) -> list[dict[str, Any]]:
     """Return one recent cached headline per exposed sector, weighted by exposure.
 
@@ -119,18 +107,13 @@ def market_signals_for_client(
 
     return sorted(
         candidates,
-        key=lambda signal: (
-            float(signal["sector_exposure_pct"]),
-            str(signal.get("published_at") or ""),
-        ),
+        key=lambda signal: (float(signal["sector_exposure_pct"]), str(signal.get("published_at") or "")),
         reverse=True,
     )[:limit]
 
 
 def _signal_matches_conflict(signal: dict[str, Any], conflict: dict[str, Any]) -> bool:
-    text = " ".join(
-        str(conflict.get(field) or "") for field in ("headline", "detail", "discussion_topic")
-    ).lower()
+    text = " ".join(str(conflict.get(field) or "") for field in ("headline", "detail", "discussion_topic")).lower()
     sector = str(signal.get("sector") or "").lower()
     terms = {sector}
     terms.update(part for part in sector.replace("&", " ").split() if len(part) >= 4)
@@ -142,8 +125,7 @@ def _signal_matches_conflict(signal: dict[str, Any], conflict: dict[str, Any]) -
 
 
 def build_action_briefs(
-    alignment_report: dict[str, Any] | None,
-    market_signals: list[dict[str, Any]] | None = None,
+    alignment_report: dict[str, Any] | None, market_signals: list[dict[str, Any]] | None = None
 ) -> list[dict[str, Any]]:
     """Decompose alignment conflicts into ordered what/when/why/how briefs."""
     if not alignment_report:
@@ -159,16 +141,12 @@ def build_action_briefs(
     for position, conflict in enumerate(conflicts, start=1):
         category = str(conflict.get("category") or "review")
         severity = str(conflict.get("severity") or "Low")
-        direct_signals = [
-            signal for signal in signals if _signal_matches_conflict(signal, conflict)
-        ]
+        direct_signals = [signal for signal in signals if _signal_matches_conflict(signal, conflict)]
         contextual_signals = direct_signals or signals[:1]
         market_note = None
         if contextual_signals:
             signal = contextual_signals[0]
-            relationship = (
-                "Directly related market signal" if direct_signals else "Portfolio market context"
-            )
+            relationship = "Directly related market signal" if direct_signals else "Portfolio market context"
             market_note = (
                 f"{relationship}: {signal['sector']} represents "
                 f"{signal['sector_exposure_pct']:.1f}% of the latest portfolio and has a "
@@ -177,14 +155,10 @@ def build_action_briefs(
             )
 
         evidence_ids = [str(item) for item in conflict.get("evidence_ids", [])]
-        discussion_topic = conflict.get("discussion_topic") or (
-            "Confirm the client view and what has changed."
-        )
+        discussion_topic = conflict.get("discussion_topic") or ("Confirm the client view and what has changed.")
         how = [
             HOW_BY_CATEGORY.get(
-                category,
-                "Verify the underlying client, mandate and latest-holdings evidence before "
-                "forming a view.",
+                category, "Verify the underlying client, mandate and latest-holdings evidence before forming a view."
             ),
             f"Use this as the client question: {discussion_topic}",
         ]
@@ -194,8 +168,7 @@ def build_action_briefs(
                 "framing; do not infer performance or causation."
             )
         how.append(
-            "Record the RM's conclusion, client response, uncertainties and agreed follow-up "
-            "in the action record."
+            "Record the RM's conclusion, client response, uncertainties and agreed follow-up in the action record."
         )
 
         briefs.append(
@@ -206,13 +179,10 @@ def build_action_briefs(
                 "severity": severity,
                 "category": category,
                 "what": WHAT_BY_CATEGORY.get(
-                    category,
-                    "Investigate the review lead and prepare a focused client discussion.",
+                    category, "Investigate the review lead and prepare a focused client discussion."
                 ),
                 "when": WHEN_BY_SEVERITY.get(severity, WHEN_BY_SEVERITY["Low"]),
-                "why": str(
-                    conflict.get("detail") or "The alignment report raised this for RM review."
-                ),
+                "why": str(conflict.get("detail") or "The alignment report raised this for RM review."),
                 "how": how,
                 "market_note": market_note,
                 "market_signals": contextual_signals,

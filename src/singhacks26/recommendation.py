@@ -27,7 +27,7 @@ from singhacks26.ai_brief import (
 
 
 class RecommendationDraft(BaseModel):
-    """Strict output contract for a recommendation draft (PRD §5.3)."""
+    """Strict output contract for a recommendation draft."""
 
     client_id: str
     summary: str
@@ -47,11 +47,7 @@ def _news_evidence_id(item: dict) -> str:
 
 
 def build_recommendation_fact_packet(
-    data: dict,
-    client_id: str,
-    vault_text: str,
-    alignment_report: dict,
-    news_items: list[dict],
+    data: dict, client_id: str, vault_text: str, alignment_report: dict, news_items: list[dict]
 ) -> dict:
     """Assemble the only payload the recommendation LLM may see (censored)."""
     client = data["clients"].loc[data["clients"].client_id == client_id].iloc[0]

@@ -59,7 +59,7 @@ PRESENTATION_CLIENTS = ("CL-0003", "CL-0010", "CL-0013", "CL-0017")
 
 
 class AlignmentDimensions(BaseModel):
-    """Status for the four alignment dimensions in the PRD contract."""
+    """Status for the four alignment dimensions."""
 
     risk_profile_alignment: DIMENSION_STATUSES
     mandate_alignment: DIMENSION_STATUSES
@@ -141,12 +141,7 @@ def _event_rows(data: dict[str, Any], client: pd.Series, positions: pd.DataFrame
     client_themes = set(
         _themes(
             " ".join(
-                [
-                    position_text,
-                    str(client.get("objectives", "")),
-                    str(client.get("source_of_wealth", "")),
-                    note_text,
-                ]
+                [position_text, str(client.get("objectives", "")), str(client.get("source_of_wealth", "")), note_text]
             )
         )
     )
@@ -269,12 +264,7 @@ def build_alignment_fact_packet(data: dict[str, Any], client_id: str, vault_text
     instruments = data["instruments"]
     position_details = positions.merge(
         instruments[
-            [
-                "instrument_id",
-                "concentration_limit_applies",
-                "sustainability_excluded",
-                "underlying_reference",
-            ]
+            ["instrument_id", "concentration_limit_applies", "sustainability_excluded", "underlying_reference"]
         ],
         on="instrument_id",
         how="left",
@@ -403,8 +393,7 @@ def build_alignment_fact_packet(data: dict[str, Any], client_id: str, vault_text
         data.get("commitments", pd.DataFrame()).client_id == client_id
     ]
     commitment_rows = _records(
-        commitments,
-        ["commitment_id", "portfolio_id", "currency", "uncalled", "expected_call_window"],
+        commitments, ["commitment_id", "portfolio_id", "currency", "uncalled", "expected_call_window"]
     )
     for row in commitment_rows:
         row["evidence_id"] = f"commitments.csv:{row['commitment_id']}"
@@ -470,12 +459,7 @@ def build_alignment_fact_packet(data: dict[str, Any], client_id: str, vault_text
 def _number_claims(text: str) -> list[tuple[Decimal, int, str]]:
     """Extract numeric claims, retaining precision for safe display rounding."""
     claims = []
-    scales = {
-        "": Decimal("1"),
-        "%": Decimal("1"),
-        "m": Decimal("1000000"),
-        "bn": Decimal("1000000000"),
-    }
+    scales = {"": Decimal("1"), "%": Decimal("1"), "m": Decimal("1000000"), "bn": Decimal("1000000000")}
     for token in NUMBER_PATTERN.findall(text):
         suffix = ""
         lower = token.lower()
@@ -743,13 +727,7 @@ class AlignmentBackgroundLoader:
         self._thread: threading.Thread | None = None
         self._status = {"running": False, "completed": 0, "pending": 0, "errors": []}
 
-    def start(
-        self,
-        data: dict[str, Any],
-        notes: dict[str, str],
-        client_ids: list[str],
-        source_hash: str,
-    ) -> bool:
+    def start(self, data: dict[str, Any], notes: dict[str, str], client_ids: list[str], source_hash: str) -> bool:
         pending = [
             client_id
             for client_id in client_ids
@@ -761,12 +739,7 @@ class AlignmentBackgroundLoader:
             if not pending:
                 self._status = {"running": False, "completed": 0, "pending": 0, "errors": []}
                 return False
-            self._status = {
-                "running": True,
-                "completed": 0,
-                "pending": len(pending),
-                "errors": [],
-            }
+            self._status = {"running": True, "completed": 0, "pending": len(pending), "errors": []}
             self._thread = threading.Thread(
                 target=self._run,
                 args=(data, notes, pending, source_hash),
@@ -776,13 +749,7 @@ class AlignmentBackgroundLoader:
             self._thread.start()
             return True
 
-    def _run(
-        self,
-        data: dict[str, Any],
-        notes: dict[str, str],
-        client_ids: list[str],
-        source_hash: str,
-    ) -> None:
+    def _run(self, data: dict[str, Any], notes: dict[str, str], client_ids: list[str], source_hash: str) -> None:
         model = os.getenv("OPENAI_MODEL", DEFAULT_MODEL)
         for client_id in client_ids:
             try:
