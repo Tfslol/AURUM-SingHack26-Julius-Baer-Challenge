@@ -1,10 +1,8 @@
-# RM Intelligence Workbench
+# Aurum - RM Intelligence Workbench
 
-An AI-assisted workbench that turns private-banking portfolio data into
-**review-ready, evidence-traced client insights**. Built for the SingHacks 2026
-Julius Baer Wealth Intelligence challenge, which asks teams to move from "what
-does my client's portfolio look like?" to "what should I know, and what should
-I do next?"
+Aurum is an AI-assisted wealth intelligence workbench that transforms private-banking portfolio data into
+**review-ready, evidence-traced client insights** for RMs.
+Built for SingHacks 2026 - Julius Baer Wealth Intelligence Challenge.
 
 
 1. **Source** - load the synthetic book: 20 clients, 24 portfolios, 1,015 positions across five dated snapshots.
